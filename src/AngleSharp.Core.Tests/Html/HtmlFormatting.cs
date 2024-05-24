@@ -1441,9 +1441,9 @@ namespace AngleSharp.Core.Tests.Html
 
 <body>
     <div class=""jive-rendered-content"">
-        <p style=""margin: 0;"">
-            <strong style=""color: rgba(0, 0, 0, 1); font-size: 14pt; font-family: Calibri;""> <strong
-                    style=""color: rgba(0, 0, 0, 1); font-size: 14pt; font-family: Calibri;"">
+        <p style="" margin: 0;"">
+            <strong style=""color: rgba(0, 0, 0, 1); font-size: 14pt; font-family: Calibri;"">
+              <strong style=""color: rgba(0, 0, 0, 1); font-size: 14pt; font-family: Calibri;"">
                     <strong style=""color: rgba(0, 0, 0, 1); font-size: 14pt; font-family: Calibri;"">
                         <strong style=""color: rgba(0, 0, 0, 1); font-size: 14pt;"">
                             <strong style=""color: rgba(0, 0, 0, 1); font-size: 14pt; font-family: Calibri;"">
@@ -1465,7 +1465,7 @@ namespace AngleSharp.Core.Tests.Html
     </div>
 </body>
 
-</html>".ToHtmlDocument(onError: (s, e) =>
+</html>".ToHtmlDocument(onError: (_, _) =>
             {
                 errors++;
             });

@@ -15,6 +15,7 @@ namespace AngleSharp.Dom
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using Html.Construction;
 
     /// <summary>
     /// Useful methods for element objects.
@@ -53,21 +54,12 @@ namespace AngleSharp.Dom
         /// <returns>The url of the namespace or null, if the prefix could not be found.</returns>
         public static String? LocateNamespaceFor(this IElement element, String prefix)
         {
-            var ns = element.NamespaceUriDirect;
+            var ns = element.GivenNamespaceUri;
             var px = element.Prefix;
 
             if (String.IsNullOrEmpty(ns) || !px.Is(prefix))
             {
-                var success = false;
-
-                if (prefix is null)
-                {
-                    success = element.TryLocateStandardNamespace(out ns);
-                }
-                else
-                {
-                    success = element.TryLocateCustomNamespace(prefix, out ns);
-                }
+                var success = prefix is not null ? element.TryLocateCustomNamespace(prefix, out ns) : element.TryLocateStandardNamespace(out ns);
 
                 if (!success)
                 {
@@ -86,25 +78,14 @@ namespace AngleSharp.Dom
         public static String? GetNamespaceUri(this IElement element)
         {
             var prefix = element.Prefix;
-            var success = false;
-            var ns = String.Empty;
 
-            if (prefix is null)
+            if (prefix is not null ? element.TryLocateCustomNamespace(prefix, out var ns) : element.TryLocateStandardNamespace(out ns))
             {
-                success = element.TryLocateStandardNamespace(out ns);
-            }
-            else
-            {
-                success = element.TryLocateCustomNamespace(prefix, out ns);
+                return ns;
             }
 
-            if (!success)
-            {
-                ns = element.ParentElement?.LocateNamespaceFor(prefix!);
+            return element.ParentElement?.LocateNamespaceFor(prefix!);
             }
-
-            return ns;
-        }
 
         /// <summary>
         /// Tries to locate a custom namespace URI.
@@ -170,7 +151,7 @@ namespace AngleSharp.Dom
         /// <param name="element">The element creating a request.</param>
         /// <param name="url">The address that specifies the target.</param>
         /// <returns>The new resource request with the information.</returns>
-        public static ResourceRequest CreateRequestFor(this IElement element, Url url) => new ResourceRequest(element, url);
+        public static ResourceRequest CreateRequestFor(this IElement element, Url url) => new(element, url);
 
         /// <summary>
         /// Checks if the element with the provided prefix matches the CSS
@@ -657,6 +638,17 @@ namespace AngleSharp.Dom
                 return !area.IsRequired;
             }
 
+            return false;
+        }
+
+        /// <summary>
+        /// Checks if the element is visible on screen.
+        /// </summary>
+        /// <param name="element">The element to check.</param>
+        /// <returns>True if the element is visible, otherwise false.</returns>
+        public static Boolean IsVisible(this IElement element)
+        {
+            //TODO
             return false;
         }
 
@@ -1501,7 +1493,8 @@ namespace AngleSharp.Dom
         /// <param name="name">The name of the attribute.</param>
         /// <param name="value">The attribute's value.</param>
         /// <param name="suppressCallbacks">Flag to suppress callbacks.</param>
-        internal static void SetOwnAttribute(this Element element, String name, String? value, Boolean suppressCallbacks = false) => element.Attributes.SetNamedItemWithNamespaceUri(new Attr(name, value!), suppressCallbacks);
+        internal static void SetOwnAttribute(this Element element, String name, String? value, Boolean suppressCallbacks = false) =>
+            element.Attributes.SetNamedItemWithNamespaceUri(new Attr(name, value!), suppressCallbacks);
 
         private static IDocumentFragment CreateFragment(this IElement context, String html)
         {
@@ -1601,13 +1594,13 @@ namespace AngleSharp.Dom
             var context = element.Context;
             var source = new TextSource(html);
             var document = new HtmlDocument(context, source);
-            var parser = new HtmlDomBuilder(document);
             var options = new HtmlParserOptions
             {
                 IsEmbedded = false,
                 IsStrictMode = false,
                 IsScripting = context.IsScripting(),
             };
+            var parser = new HtmlDomBuilder(HtmlDomConstructionFactory.Instance, document, new HtmlTokenizerOptions(options));
             return parser.ParseFragment(options, element).DocumentElement;
         }
     }

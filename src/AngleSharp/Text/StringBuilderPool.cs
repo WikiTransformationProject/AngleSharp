@@ -10,7 +10,7 @@ namespace AngleSharp.Text
     public static class StringBuilderPool
     {
         private static readonly Stack<StringBuilder> _builder = new ();
-        private static readonly Object _lock = new Object();
+        private static readonly Object _lock = new();
         private static Int32 _count = 4;
         private static Int32 _limit = 85000;
 
@@ -58,25 +58,7 @@ namespace AngleSharp.Text
         public static String ToPool(this StringBuilder sb)
         {
             var result = sb.ToString();
-
-            lock (_lock)
-            {
-                var current = _builder.Count;
-
-                if (sb.Capacity > _limit)
-                {
-                    // Drop large instances
-                }
-                else if (current == _count)
-                {
-                    DropMinimum(sb);
-                }
-                else if (current < Math.Min(2, _count) || _builder.Peek().Capacity < sb.Capacity)
-                {
-                    _builder.Push(sb);
-                }
-            }
-
+            ReturnToPool(sb);
             return result;
         }
 
