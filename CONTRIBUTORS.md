@@ -53,7 +53,9 @@ AngleSharp contains code written by (in order of first pull request / commit):
 * [Muhammad Nabilasykar](https://github.com/zukarusan)
 * [Dmitry Kushnir](https://github.com/dv00d00)
 * [Georg Jung](https://github.com/georg-jung)
-* [James Thompson ](https://github.com/thompson-tomo)
+* [James Thompson](https://github.com/thompson-tomo)
+* [schaakverslaafd](https://github.com/schaakverslaafd)
+* [Tom van Enckevort](https://github.com/tomvanenckevort)
 
 Without these awesome people AngleSharp could not exist. Thanks to everyone for your contributions! :beers:
 
