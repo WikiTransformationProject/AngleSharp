@@ -127,7 +127,12 @@ namespace AngleSharp.Html
             }
         }
 
-        internal static void WriteAttributeValue(IAttr attr, StringBuilder stringBuilder)
+        /// <summary>
+        /// Writes the attribute's value
+        /// </summary>
+        /// <param name="attr">The attribute to serialize.</param>
+        /// <param name="stringBuilder">The value characters will be appended here</param>
+        protected virtual void WriteAttributeValue(IAttr attr, StringBuilder stringBuilder)
         {
             var value = attr.Value ?? String.Empty;
 
