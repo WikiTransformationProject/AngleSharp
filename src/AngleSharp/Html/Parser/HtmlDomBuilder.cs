@@ -359,7 +359,7 @@ namespace AngleSharp.Html.Parser
             
             if (node is null || token.Type == HtmlTokenType.EndOfFile ||
                 node.Flags.HasFlag(NodeFlags.HtmlMember) ||
-                (node.Flags.HasFlag(NodeFlags.HtmlTip) && token.IsHtmlCompatible) ||
+                (token.IsHtmlCompatible && IsHtmlTip(node)) ||
                 (node.Flags.HasFlag(NodeFlags.MathTip) && token.IsMathCompatible) ||
                 (node.Flags.HasFlag(NodeFlags.MathMember) && token.IsSvg &&
                  node.LocalName.Is(TagNames.AnnotationXml)))
@@ -2311,6 +2311,11 @@ namespace AngleSharp.Html.Parser
                         var optgroup = _elementFactory.Create(_document, TagNames.Optgroup);
                         AddElement(optgroup, ref token);
                     }
+                    else if (tagName.Is(TagNames.Button))
+                    {
+                        var button = _elementFactory.Create(_document, TagNames.Button);
+                        AddElement(button, ref token);
+                    }
                     else if (tagName.Is(TagNames.Select))
                     {
                         RaiseErrorOccurred(HtmlParseError.SelectNesting, ref token);
@@ -2329,6 +2334,15 @@ namespace AngleSharp.Html.Parser
                     else if (tagName.IsOneOf(TagNames.Template, TagNames.Script) || IsCustomElementEverywhere(tagName))
                     {
                         InHead(ref token);
+                    }
+                    else if (tagName.Is(TagNames.Xmp))
+                    {
+                        InBody(ref token);
+                    }
+                    else if (!CurrentNode.LocalName.Is(TagNames.Select))
+                    {
+                        var element = _elementFactory.CreateUnknown(_document, tagName);
+                        AddElement(element, ref token);
                     }
                     else
                     {
@@ -2361,6 +2375,17 @@ namespace AngleSharp.Html.Parser
                     {
                         RaiseErrorOccurred(HtmlParseError.SelectNotInScope, ref token);
                     }
+                    else if (!CurrentNode.LocalName.Is(TagNames.Select))
+                    {
+                        if (CurrentNode.LocalName.Is(tagName))
+                        {
+                            CloseCurrentNode();
+                        }
+                        else
+                        {
+                            RaiseErrorOccurred(HtmlParseError.TagDoesNotMatchCurrentNode, ref token);
+                        }
+                    }
                     else
                     {
                         RaiseErrorOccurred(HtmlParseError.TagCannotEndHere, ref token);
@@ -2379,6 +2404,70 @@ namespace AngleSharp.Html.Parser
                     return;
                 }
             }
+        }
+
+        /// <summary>
+        /// Intermediate step - as long as customizable select is not finished.
+        /// </summary>
+        /// <param name="token">The passed token.</param>
+        private void InButtonInSelect(ref StructHtmlToken token)
+        {
+            if (token.Type == HtmlTokenType.StartTag)
+            {
+                var tagName = token.Name;
+
+                if (tagName.Is(TagNames.Select) || tagName.Is(TagNames.Option) || tagName.Is(TagNames.Optgroup))
+                {
+                    InSelect(ref token);
+                    return;
+                }
+            }
+
+            if (token.Type == HtmlTokenType.EndTag)
+            {
+                var tagName = token.Name;
+
+                if (tagName.Is(TagNames.Button) && CurrentNode.LocalName.Is(TagNames.Button))
+                {
+                    CloseCurrentNode();
+                    _currentMode = HtmlTreeMode.InSelect;
+                    return;
+                }
+            }
+
+            InBody(ref token);
+        }
+
+        /// <summary>
+        /// Intermediate step - as long as customizable select is not finished.
+        /// </summary>
+        /// <param name="token">The passed token.</param>
+        private void InOptionInSelect(ref StructHtmlToken token)
+        {
+            if (token.Type == HtmlTokenType.StartTag)
+            {
+                var tagName = token.Name;
+
+                if (tagName.Is(TagNames.Select) || tagName.Is(TagNames.Option) || tagName.Is(TagNames.Optgroup))
+                {
+                    InSelect(ref token);
+                    return;
+                }
+            }
+
+            if (token.Type == HtmlTokenType.EndTag)
+            {
+                var tagName = token.Name;
+
+                if (tagName.Is(TagNames.Option) && CurrentNode.LocalName.Is(TagNames.Option))
+                {
+                    CloseCurrentNode();
+                    _currentMode = HtmlTreeMode.InSelect;
+                    return;
+                }
+            }
+
+            InBody(ref token);
         }
 
         /// <summary>
@@ -3880,6 +3969,32 @@ namespace AngleSharp.Html.Parser
         #endregion
 
         #region Helpers
+
+        /// <summary>
+        /// Checks if the given element is actually an HTML Text Insertation Point.
+        /// </summary>
+        private static Boolean IsHtmlTip(IConstructableElement node)
+        {
+            if (!node.Flags.HasFlag(NodeFlags.HtmlTip))
+            {
+                if (node.Flags.HasFlag(NodeFlags.MathMember) && node.LocalName.Is(TagNames.AnnotationXml))
+                {
+                    // The spec matches the encoding value ASCII case-insensitively, which is
+                    // why ForeignNormalTag runs the same test with Isi. An ordinal comparison
+                    // here kept TEXT/HTML out of the integration point.
+                    var encoding = node.GetAttribute(default, AttributeNames.Encoding);
+
+                    if (encoding.Isi(MimeTypeNames.Html) || encoding.Isi(MimeTypeNames.ApplicationXHtml))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            return true;
+        }
 
         /// <summary>
         /// Checks if the given tag name should be considered as a "custom element everywhere".

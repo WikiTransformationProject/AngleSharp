@@ -1,13 +1,123 @@
+# 1.7.2
+
+Released on Sunday, August 23 2026
+
+- Fixed matching of `annotation-xml` encoding to be case-insensitive (#1284) @arpitjain099
+- Fixed `<xmp>` usage in `<select>` elements
+- Added ability to parse immutable byte buffers without a stream (#1286) @dv00d00
+
+# 1.7.1
+
+Released on Wednesday, August 5 2026
+
+- Improved WHATWG Url specification (#802) @jafin
+- Improved tokenizer read performance (#1274) @dv00d00
+- Fixed auxiliary browsing context lifetime (#1278) @jafin
+- Fixed duplicated `DomName` attributes on DOM geometry
+- Fixed `document.open()` destroying the DOM tree in case of encoding problems (#1276)
+- Fixed source references having wrong line (#1280)
+
+# 1.7.0
+
+Released on Friday, July 31 2026
+
+- Improved CSS selector performance (#1270, #929) @lahma
+- Added support for the `:host` pseudo selector (#1271)
+- Added support for the DomGeometry spec (#1193)
+
+# 1.6.0
+
+Released on Sunday, July 26 2026
+
+- Improved performance for text tokenization (#1262) @dv00d00
+- Improved CSS selector performance
+- Improved observer dispatch during HTML parsing (#1266) @dv00d00
+- Improved declaration of unsupported pseudo elements
+- Fixed inconsistent behavior and segfaults on Android Release build (#1252) @DevGitPit
+- Fixed CSS attribute selector modifier handling for `i` / `I` (case-insensitive) and `s` / `S` (case-sensitive)
+- Added API enhancements to expose asynchronous HTML token source (#1265) @dv00d00
+- Added bounded stream parsing mode (#1263) @dv00d00
+- Added canonicalization of decimal, octal, or hexadecimal IPv4 literals in `Url`
+- Added parsing of / checks for IPv6 literals in `Url`
+- Added support for the CSS column combinator (`||`) selector syntax
+- Added correct identification of `CurrentSource` in `CssMediaElement`
+
+# 1.5.2
+
+Released on Sunday, July 5 2026
+
+- Fixed `NodeIterator` pre-removing steps to use the first following node (#1260) @ivandrofly
+- Fixed `Range.IsCollapsed` to also compare offsets (#1259) @ivandrofly
+- Fixed swapped comparison in `Range.CompareBoundaryTo` (#1258) @ivandrofly
+- Fixed `Range.CopyContent` to follow the DOM Standard (#1257) @ivandrofly
+- Fixed `Range.ExtractContent` to follow the DOM Standard (#1256) @ivandrofly
+- Added missing media attribute change detection on SVG style elements (#1261) @ivandrofly
+
+# 1.5.1
+
+Released on Saturday, June 13 2026
+
+- Fixed tokenization of large plain-text contents (#1251) @SimonCropp
+
+# 1.5.0
+
+Released on Saturday, June 6 2026
+
+- Fixed vulnerability via annotation-xml elements (GHSA-pgww-w46g-26qg)
+- Updated benchmarks (#1246) @jafin
+- Added ability to pass in cookie container to `MemoryCookieProvider` (#1249) @riina
+- Added HTML parser selector optimizations (#1245) @jafin
+
+# 1.4.1
+
+Released on Saturday, November 15 2025.
+
+- Fixed NuGet target framework for .NET 10
+
+# 1.4.0
+
+Released on Wednesday, November 12 2025.
+
+- Fixed handling of carriage return in text sources
+- Added support for `of` syntax in `:nth-child` functions within CSS selectors
+- Added `selectedcontent` to known elements (#1230)
+- Added `:open`, `::checkmark`, `::picker-icon`, and `::picker(ident)` to selector syntax (#1230)
+- Added parsing for customizable `<select>` (#1230)
+- Added .NET 10 as an explicit target
+
+# 1.3.1
+
+Released on Saturday, November 8 2025.
+
+- Added `IReadOnlyList<T>` interface to `IHtmlCollection`, `IStringList`, `ITokenList`, `IHtmlFormControlsCollection` (#1226, #1227) @weitzhandler
+
+# 1.3.0
+
+Released on Friday, April 18 2025.
+
+- Fixed DOM exposed type of `HasChildNodes` (#1219) @arekdygas
+- Fixed `NodeIterator` behavior when nodes are removed (#1222)
+- Improved form documentation (#1220) @RedZone908
+- Updated to NUKE 9 and removed obsolete .NET 6 and 9 targets (#1216) @lahma
+- Added `GetAttributeNode` methods to `IElement` (#1223) @arekdygas
+- Added support for finding targets in browsing contexts (#1218) @TheJayMann
+- Added support for targetting iframes (#1205) @TheJayMann
+
 # 1.2.0
 
-Released on Sunday, April 14 2024.
+Released on Tuesday, December 31 2024.
 
 - Fixed loading of link element source (#1184) @tomvanenckevort
 - Fixed usage of outdated dependency (#1186)
+- Fixed cookie `Expires` recognized as local time (#1212) @noobow34
+- Fixed validation for problematic decimal step values (#1210) @rhuebner76
 - Removed unnecessary references for .NET 6 and higher (#1187) @lahma
 - Removed support for .NET 4.6.1 (least version is 4.6.2)
 - Updated to NUKE 8 (#1188) @lahma
 - Added new `OnToken` event for the tokenizer (#1153) @schaakverslaafd
+- Added new setting for disabling `StringBuilder` pooling (#1203) @micahbresette
+- Added context to extension methods (#1194) @memiamp
+- Added `property` attribute to meta tags (#1195) @hflexgrig
 
 # 1.1.2
 

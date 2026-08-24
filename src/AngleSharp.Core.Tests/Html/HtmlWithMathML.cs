@@ -1,4 +1,4 @@
-﻿namespace AngleSharp.Core.Tests.Html
+namespace AngleSharp.Core.Tests.Html
 {
     using AngleSharp.Dom;
     using NUnit.Framework;
@@ -1267,10 +1267,16 @@
             Assert.AreEqual(NodeType.Element, dochtml1body1select0.NodeType);
 
             var dochtml1body1select0option0 = dochtml1body1select0.ChildNodes[0] as Element;
-            Assert.AreEqual(0, dochtml1body1select0option0.ChildNodes.Length);
+            Assert.AreEqual(1, dochtml1body1select0option0.ChildNodes.Length);
             Assert.AreEqual(0, dochtml1body1select0option0.Attributes.Length);
             Assert.AreEqual("option", dochtml1body1select0option0.GetTagName());
             Assert.AreEqual(NodeType.Element, dochtml1body1select0option0.NodeType);
+
+            var dochtml1body1select0option0math0 = dochtml1body1select0option0.ChildNodes[0] as Element;
+            Assert.AreEqual(0, dochtml1body1select0option0math0.ChildNodes.Length);
+            Assert.AreEqual(0, dochtml1body1select0option0math0.Attributes.Length);
+            Assert.AreEqual("math", dochtml1body1select0option0math0.GetTagName());
+            Assert.AreEqual(NodeType.Element, dochtml1body1select0option0math0.NodeType);
         }
 
         [Test]

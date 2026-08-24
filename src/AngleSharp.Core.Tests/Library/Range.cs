@@ -1,5 +1,6 @@
 namespace AngleSharp.Core.Tests.Library
 {
+    using AngleSharp.Dom;
     using NUnit.Framework;
 
     [TestFixture]
@@ -32,6 +33,25 @@ namespace AngleSharp.Core.Tests.Library
             Assert.AreEqual(5, range.End);
             Assert.AreEqual(text, range.Tail);
             Assert.AreEqual(text, range.CommonAncestor);
+            Assert.IsTrue(range.IsCollapsed);
+        }
+
+        [Test]
+        public void RangeWithDifferentOffsetsInSameNodeIsNotCollapsed()
+        {
+            var document = "<p>abc<b>def</b>ghi</p>".ToHtmlDocument();
+            var p = document.QuerySelector("p");
+            var range = document.CreateRange();
+            range.Select(p.QuerySelector("b"));
+
+            Assert.AreEqual(p, range.Head);
+            Assert.AreEqual(1, range.Start);
+            Assert.AreEqual(p, range.Tail);
+            Assert.AreEqual(2, range.End);
+            Assert.IsFalse(range.IsCollapsed);
+
+            range.Collapse(true);
+
             Assert.IsTrue(range.IsCollapsed);
         }
 
@@ -102,6 +122,33 @@ namespace AngleSharp.Core.Tests.Library
         }
 
         [Test]
+        public void CanCompareBoundaryPointsOfOverlappingRanges()
+        {
+            var document = "<p>abc<b>def</b>ghi</p>".ToHtmlDocument();
+            var p = document.QuerySelector("p");
+            var outer = document.CreateRange();
+            outer.StartWith(p, 0);
+            outer.EndWith(p, 3);
+            var inner = document.CreateRange();
+            inner.StartWith(p, 1);
+            inner.EndWith(p, 2);
+
+            // START_TO_START compares this start (p,0) to source start (p,1)
+            Assert.AreEqual(RangePosition.Before, outer.CompareBoundaryTo(RangeType.StartToStart, inner));
+            // START_TO_END compares this end (p,3) to source start (p,1)
+            Assert.AreEqual(RangePosition.After, outer.CompareBoundaryTo(RangeType.StartToEnd, inner));
+            // END_TO_END compares this end (p,3) to source end (p,2)
+            Assert.AreEqual(RangePosition.After, outer.CompareBoundaryTo(RangeType.EndToEnd, inner));
+            // END_TO_START compares this start (p,0) to source end (p,2)
+            Assert.AreEqual(RangePosition.Before, outer.CompareBoundaryTo(RangeType.EndToStart, inner));
+
+            Assert.AreEqual(RangePosition.After, inner.CompareBoundaryTo(RangeType.StartToStart, outer));
+            Assert.AreEqual(RangePosition.After, inner.CompareBoundaryTo(RangeType.StartToEnd, outer));
+            Assert.AreEqual(RangePosition.Before, inner.CompareBoundaryTo(RangeType.EndToEnd, outer));
+            Assert.AreEqual(RangePosition.Before, inner.CompareBoundaryTo(RangeType.EndToStart, outer));
+        }
+
+        [Test]
         public void CanIntersects()
         {
             var document = "<body></body>".ToHtmlDocument();
@@ -163,6 +210,40 @@ namespace AngleSharp.Core.Tests.Library
         }
 
         [Test]
+        public void CanCopyContentWithPartiallyContainedTextNodes()
+        {
+            var document = "<p>abc<b>def</b>ghi</p>".ToHtmlDocument();
+            var p = document.QuerySelector("p");
+            var range = document.CreateRange();
+            range.StartWith(p.ChildNodes[0], 1);
+            range.EndWith(p.ChildNodes[2], 2);
+
+            var fragment = range.CopyContent();
+            var div = document.CreateElement("div");
+            div.AppendChild(fragment);
+
+            Assert.AreEqual("bc<b>def</b>gh", div.InnerHtml);
+            Assert.AreEqual("abc<b>def</b>ghi", p.InnerHtml);
+        }
+
+        [Test]
+        public void CanCopyContentWithPartiallyContainedElements()
+        {
+            var document = "<div id=host><a>abc</a><b>def</b></div>".ToHtmlDocument();
+            var host = document.QuerySelector("#host");
+            var range = document.CreateRange();
+            range.StartWith(document.QuerySelector("a").FirstChild, 1);
+            range.EndWith(document.QuerySelector("b").FirstChild, 1);
+
+            var fragment = range.CopyContent();
+            var div = document.CreateElement("div");
+            div.AppendChild(fragment);
+
+            Assert.AreEqual("<a>bc</a><b>d</b>", div.InnerHtml);
+            Assert.AreEqual("<a>abc</a><b>def</b>", host.InnerHtml);
+        }
+
+        [Test]
         public void CanClearContent()
         {
             var document = @"
@@ -192,6 +273,62 @@ namespace AngleSharp.Core.Tests.Library
             Assert.IsFalse(htmlRaw.Contains("This should be cleared"));
             Assert.IsFalse(htmlRaw.Contains("This should be deleted too"));
             Assert.IsFalse(document.Contains(toDelete));
+        }
+
+        [Test]
+        public void CanExtractContentWithPartiallyContainedTextNodes()
+        {
+            var document = "<p>abc<b>def</b>ghi</p>".ToHtmlDocument();
+            var p = document.QuerySelector("p");
+            var range = document.CreateRange();
+            range.StartWith(p.ChildNodes[0], 1);
+            range.EndWith(p.ChildNodes[2], 2);
+
+            var fragment = range.ExtractContent();
+            var div = document.CreateElement("div");
+            div.AppendChild(fragment);
+
+            Assert.AreEqual("bc<b>def</b>gh", div.InnerHtml);
+            Assert.AreEqual("ai", p.InnerHtml);
+            Assert.AreEqual(p, range.Head);
+            Assert.AreEqual(1, range.Start);
+            Assert.AreEqual(p, range.Tail);
+            Assert.AreEqual(1, range.End);
+        }
+
+        [Test]
+        public void CanExtractContentWithPartiallyContainedElements()
+        {
+            var document = "<div id=host><a>abc</a><b>def</b></div>".ToHtmlDocument();
+            var host = document.QuerySelector("#host");
+            var range = document.CreateRange();
+            range.StartWith(document.QuerySelector("a").FirstChild, 1);
+            range.EndWith(document.QuerySelector("b").FirstChild, 1);
+
+            var fragment = range.ExtractContent();
+            var div = document.CreateElement("div");
+            div.AppendChild(fragment);
+
+            Assert.AreEqual("<a>bc</a><b>d</b>", div.InnerHtml);
+            Assert.AreEqual("<a>a</a><b>ef</b>", host.InnerHtml);
+        }
+
+        [Test]
+        public void CanExtractContentFromDetachedSubtree()
+        {
+            var document = "<body></body>".ToHtmlDocument();
+            var detached = document.CreateElement("div");
+            detached.InnerHtml = "<a>abc</a><b>def</b>";
+            var range = document.CreateRange();
+            range.StartWith(detached.QuerySelector("a").FirstChild, 1);
+            range.EndWith(detached.QuerySelector("b").FirstChild, 1);
+
+            var fragment = range.ExtractContent();
+            var div = document.CreateElement("div");
+            div.AppendChild(fragment);
+
+            Assert.AreEqual("<a>bc</a><b>d</b>", div.InnerHtml);
+            Assert.AreEqual("<a>a</a><b>ef</b>", detached.InnerHtml);
         }
     }
 }

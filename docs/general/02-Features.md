@@ -4,7 +4,7 @@ section: "AngleSharp.Core"
 ---
 # Included Features
 
-This section lists features that have been moved from the list of upcoming features to the implemented features. It does not include all available features, even though this may be the ultimate goal of this page. The purpose of moving the implemented features in here is to keep track of the used references. That way it should be easier to track W3C specification changes or if tests are missing.
+This section collects historical implementation notes for major features. It does not aim to be an exhaustive, up-to-date product matrix. For the current package layout and companion projects, see the roadmap and ecosystem page.
 
 ## Mutation Records
 
@@ -49,7 +49,7 @@ More information can be found at:
 
 ## Extend the IWindow Interface
 
-Central for any interaction with the DOM (at least from the perspective of a (JavaScript) developer) is the (root) context object, usually a `Window` object. AngleSharp uses the `IWindow` interface as IDL for such objects. Despite the available class `AnalysisWindow` in v0.7 AngleSharp does only provide a `Window` class implementation. It is much more general and may work together with the `RenderDevice` information.
+Central for any interaction with the DOM (at least from the perspective of a JavaScript developer) is the root context object, usually a `Window` object. AngleSharp uses the `IWindow` interface as IDL for such objects. AngleSharp provides a general-purpose `Window` implementation that can cooperate with device and rendering abstractions supplied by the active configuration.
 
 The `Window` implementation also includes timers and more and can be really handy. It is quite crucial and used heavily from the browsing context. However, it is still possible to provide custom implementations.
 
@@ -184,6 +184,10 @@ The other advantage of the second approach is the possibility of starting other 
 AngleSharp will therefore try to implement the second approach. The `TextSource` class can already handle (network) streams well - and does use the "natively" provided asynchronous callback possibilities. Nevertheless, the `ParseAsync` method only relies on the synchronous one, wrapping it in another `Task` (which is just another `Thread` in this scenario).
 
 The idea is to provide a real asynchronous method, i.e. a method that makes use of the async methods provided in `TextSource`. This will eventually result in a lot of copy / paste with only a few changes, but it is worth the duplication. Of course, some techniques to reduce duplication have to be used to minimize maintenance.
+
+The concrete `HtmlParser` also provides an opt-in `HtmlStreamSourceMode.Streaming` mode. It decodes a byte stream incrementally into pooled buffers, retains a bounded tokenizer lookback window, and supports BOM or `<meta charset>` detection during a restartable 1024-byte prelude. The existing stream overload remains buffered for compatibility.
+
+Streaming mode does not retain the complete source text. Parsing can still fall back to a synchronous refill when a token exceeds the asynchronously prefetched window, and scripting uses the buffered source because source insertion requires mutable retained input.
 
 As an important hint here: Any `await` call should be only used with `ConfigureAwait(false)`. This is required to ensure that calling the method synchronously will not result in any deadlocks regardless of the environment.
 

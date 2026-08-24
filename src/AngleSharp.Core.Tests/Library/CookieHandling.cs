@@ -10,7 +10,6 @@ namespace AngleSharp.Core.Tests.Library
     using System;
     using System.Globalization;
     using System.Linq;
-    using System.Net;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -81,6 +80,16 @@ namespace AngleSharp.Core.Tests.Library
         }
 
         [Test]
+        public async Task CookieExpiredInGmtInterpretedAsLocaltime()
+        {
+            //This test must be executed in an environment where the local time is ahead of GMT.
+            var expires = DateTime.Now.AddMinutes(10).ToUniversalTime();
+            var document = await LoadDocumentAloneWithCookie("");
+            document.Cookie = $"ppkcookie2=yet yet another test; expires={expires.ToString("ddd, dd MMM yyyy HH:mm:ss", CultureInfo.InvariantCulture)} GMT; path=/";
+            Assert.AreEqual("ppkcookie2=yet yet another test", document.Cookie);
+        }
+
+        [Test]
         public async Task SettingTwoSimpleCookiesInRequestAppearsInDocument()
         {
             var cookie = await LoadDocumentWithCookie("UserID=Foo, Auth=bar");
@@ -140,7 +149,7 @@ namespace AngleSharp.Core.Tests.Library
         public async Task SettingOneExpiredCookieAndAFutureCookieInRequestDoAppearInDocument()
         {
             var cookie = await LoadDocumentWithCookie(
-                "cookie=expiring; Expires=Tue, 10 Nov 2009 23:00:00 GMT, foo=bar; Expires=Tue, 28 Jan 2025 13:37:00 GMT");
+                "cookie=expiring; Expires=Tue, 10 Nov 2009 23:00:00 GMT, foo=bar; Expires=Tue, 28 Jan 2035 13:37:00 GMT");
             Assert.AreEqual("foo=bar", cookie);
         }
 
@@ -247,10 +256,12 @@ namespace AngleSharp.Core.Tests.Library
                 var document = await context.OpenAsync(baseUrl);
 
                 var expected = JObject.Parse(@"{
-  ""foo"": ""bar"",
-  ""k1"": ""v1"",
-  ""k2"": ""v2"",
-  ""test"": ""baz""
+  ""cookies"": {
+    ""foo"": ""bar"",
+    ""k1"": ""v1"",
+    ""k2"": ""v2"",
+    ""test"": ""baz""
+  }
 }
 ");
 
@@ -271,7 +282,9 @@ namespace AngleSharp.Core.Tests.Library
                 var document = await context.OpenAsync(redirectUrl);
 
                Assert.AreEqual(@"{
-  ""test"": ""baz""
+  ""cookies"": {
+    ""test"": ""baz""
+  }
 }
 ".Replace(Environment.NewLine, "\n"), document.Body.TextContent);
             }
@@ -467,6 +480,36 @@ namespace AngleSharp.Core.Tests.Library
             mcp.SetCookie(url,
                 $"{cookie}; expires={DateTime.UtcNow.AddHours(1):R}");
             Assert.AreEqual(mcp.GetCookie(url), cookie);
+        }
+
+        [Test]
+        public void ImportedCookieContainerReadsCorrectly_Issue1249()
+        {
+            var mcp = new MemoryCookieProvider();
+            var url = Url.Create("http://www.example.com");
+            var cookie = "A=A";
+            mcp.SetCookie(url,
+                $"{cookie}; expires={DateTime.UtcNow.AddHours(1):R}");
+            Assert.AreEqual(mcp.GetCookie(url), cookie);
+            var initialContainer = mcp.Container;
+            var manualMcp = new MemoryCookieProvider(initialContainer);
+            Assert.AreSame(initialContainer, manualMcp.Container);
+            Assert.AreEqual(manualMcp.GetCookie(url), cookie);
+        }
+
+        [Test]
+        public void ImportedCookieContainerWritesCorrectly_Issue1249()
+        {
+            var mcp = new MemoryCookieProvider();
+            var url = Url.Create("http://www.example.com");
+            var cookie = "A=A";
+            var initialContainer = mcp.Container;
+            var manualMcp = new MemoryCookieProvider(initialContainer);
+            Assert.AreSame(initialContainer, manualMcp.Container);
+            manualMcp.SetCookie(url,
+                $"{cookie}; expires={DateTime.UtcNow.AddHours(1):R}");
+            Assert.AreEqual(mcp.GetCookie(url), cookie);
+            Assert.AreEqual(manualMcp.GetCookie(url), cookie);
         }
 
         private static Task<IDocument> LoadDocumentWithFakeRequesterAndCookie(IResponse initialResponse,

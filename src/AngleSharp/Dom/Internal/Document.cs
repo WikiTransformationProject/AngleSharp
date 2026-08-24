@@ -36,6 +36,7 @@ namespace AngleSharp.Dom
         private readonly Location _location;
         private readonly TextSource _source;
         private readonly Object _importedUrisLock = new();
+        private IAttributeObserver[]? _attributeObservers;
 
         private QuirksMode _quirksMode;
         private Sandboxes _sandbox;
@@ -773,6 +774,9 @@ namespace AngleSharp.Dom
         /// <inheritdoc />
         public IBrowsingContext Context => _context;
 
+        internal IReadOnlyList<IAttributeObserver> AttributeObservers =>
+            _attributeObservers ??= _context.GetServices<IAttributeObserver>().ToArray();
+
         /// <inheritdoc />
         public HttpStatusCode StatusCode
         {
@@ -939,6 +943,9 @@ namespace AngleSharp.Dom
                         return this;
                     }
 
+                    // Moved up, i.e., before any destructive action as per #1276
+                    _source.CurrentEncoding = TextEncoding.Utf8;
+
                     Unload(recycle: true).Wait();
                     Abort();
                     RemoveEventListeners();
@@ -950,7 +957,6 @@ namespace AngleSharp.Dom
 
                     _loop?.CancelAll();
                     ReplaceAll(null, suppressObservers: true);
-                    _source.CurrentEncoding = TextEncoding.Utf8;
                     _salvageable = true;
                     _ready = DocumentReadyState.Loading;
 
@@ -1054,10 +1060,20 @@ namespace AngleSharp.Dom
         }
 
         /// <inheritdoc />
-        public INodeIterator CreateNodeIterator(INode root, FilterSettings settings = FilterSettings.All, NodeFilter? filter = null) => new NodeIterator(root, settings, filter);
+        public INodeIterator CreateNodeIterator(INode root, FilterSettings settings = FilterSettings.All, NodeFilter? filter = null)
+        {
+            var iterator = new NodeIterator(root, settings, filter);
+            AttachReference(iterator);
+            return iterator;
+        }
 
         /// <inheritdoc />
-        public ITreeWalker CreateTreeWalker(INode root, FilterSettings settings = FilterSettings.All, NodeFilter? filter = null) => new TreeWalker(root, settings, filter);
+        public ITreeWalker CreateTreeWalker(INode root, FilterSettings settings = FilterSettings.All, NodeFilter? filter = null)
+        {
+            var walker = new TreeWalker(root, settings, filter);
+            AttachReference(walker);
+            return walker;
+        }
 
         /// <inheritdoc />
         public IRange CreateRange()

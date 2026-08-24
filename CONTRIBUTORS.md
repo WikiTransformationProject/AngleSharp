@@ -56,6 +56,19 @@ AngleSharp contains code written by (in order of first pull request / commit):
 * [James Thompson](https://github.com/thompson-tomo)
 * [schaakverslaafd](https://github.com/schaakverslaafd)
 * [Tom van Enckevort](https://github.com/tomvanenckevort)
+* [Micah Bresette](https://github.com/micahbresette)
+* [Russ H](https://github.com/rhuebner76)
+* [noobow](https://github.com/noobow34)
+* [Martin Parkin](https://github.com/memiamp)
+* [Hakob Grigoryan](https://github.com/hflexgrig)
+* [TheJayMann](https://github.com/TheJayMann)
+* [arekdygas](https://github.com/arekdygas)
+* [RedZone908](https://github.com/RedZone908)
+* [Shimmy Weitzhandler](https://github.com/weitzhandler)
+* [Jason Finch](https://github.com/jafin)
+* [riina](https://github.com/riina)
+* [DevGitPit](https://github.com/DevGitPit)
+* [Arpit Jain](https://github.com/arpitjain099)
 
 Without these awesome people AngleSharp could not exist. Thanks to everyone for your contributions! :beers:
 

@@ -78,6 +78,36 @@ namespace AngleSharp.Core.Tests.Library
         }
 
         [Test]
+        public void AudioCurrentSourceFallsBackToFirstSourceElement()
+        {
+            var document = CreateEmpty("http://localhost");
+            var audio = document.CreateElement<IHtmlAudioElement>();
+            var emptySource = document.CreateElement<IHtmlSourceElement>();
+            var secondSource = document.CreateElement<IHtmlSourceElement>();
+
+            secondSource.Source = "fallback.mp3";
+
+            audio.AppendChild(emptySource);
+            audio.AppendChild(secondSource);
+
+            Assert.AreEqual("http://localhost/fallback.mp3", audio.CurrentSource);
+        }
+
+        [Test]
+        public void VideoCurrentSourcePrefersOwnSourceOverSourceElement()
+        {
+            var document = CreateEmpty("http://localhost");
+            var video = document.CreateElement<IHtmlVideoElement>();
+            var source = document.CreateElement<IHtmlSourceElement>();
+
+            video.Source = "primary.mp4";
+            source.Source = "fallback.mp4";
+            video.AppendChild(source);
+
+            Assert.AreEqual("http://localhost/primary.mp4", video.CurrentSource);
+        }
+
+        [Test]
         public void ChangeObjectSourceResultsInUpdatedAbsoluteUrl()
         {
             var document = CreateEmpty("http://localhost");
@@ -1421,6 +1451,31 @@ namespace AngleSharp.Core.Tests.Library
             template.InnerHtml = "<div></div>";
             Assert.IsNotNull(template.Content.FirstChild);
             Assert.AreEqual(0, template.ChildNodes.Length);
+        }
+
+        [Test]
+        public void GetAttributeNode()
+        {
+            var ns = "http://anglesharp.com/ns";
+
+            var parser = new HtmlParser();
+            var document = parser.ParseDocument("<html><head></head><body></body></html>");
+
+            var div = document.CreateElement("div");
+            var attributeValue = "abc";
+            div.SetAttribute(ns, "test:name", attributeValue);
+
+            var attrByName = div.GetAttributeNode("name");
+            var attrByPrefixAndName = div.GetAttributeNode("test:name");
+            var attrByNamespaceAndName = div.GetAttributeNode(ns, "name");
+            var attrByNamespaceAndPrefixAndName = div.GetAttributeNode(ns, "test:name");
+
+            Assert.IsNull(attrByName);
+            Assert.IsNotNull(attrByPrefixAndName);
+            Assert.IsNotNull(attrByNamespaceAndName);
+            Assert.IsNull(attrByNamespaceAndPrefixAndName);
+            Assert.AreEqual(attributeValue, attrByPrefixAndName.Value);
+            Assert.AreEqual(attrByPrefixAndName, attrByNamespaceAndName);
         }
     }
 }

@@ -7,7 +7,7 @@ namespace AngleSharp.Dom
     /// <summary>
     /// The iterator through a collection of DOM nodes.
     /// </summary>
-    sealed class NodeIterator : INodeIterator
+    sealed class NodeIterator : INodeIterator, IPreRemove
     {
         #region Fields
 
@@ -45,6 +45,43 @@ namespace AngleSharp.Dom
         public INode Reference => _reference;
 
         public Boolean IsBeforeReference => _beforeNode;
+
+        #endregion
+
+        #region Internal
+
+        void IPreRemove.PreRemove(Node parent, Node node, Int32 index)
+        {
+            // Algorithm according to:
+            // https://dom.spec.whatwg.org/#nodeiterator-pre-removing-steps
+
+            if (Root != node && node.IsInclusiveAncestorOf(Reference))
+            {
+                if (IsBeforeReference)
+                {
+                    var next = Root.GetDescendants()
+                        .SkipWhile(m => !Object.ReferenceEquals(m, node))
+                        .FirstOrDefault(m => !m.IsInclusiveDescendantOf(node));
+
+                    if (next is not null)
+                    {
+                        _reference = next;
+                        return;
+                    }
+                    
+                    _beforeNode = false;
+                }
+
+                if (node.PreviousSibling is null)
+                {
+                    _reference = parent;
+                }
+                else
+                {
+                    _reference = node.PreviousSibling.GetDescendantsAndSelf().Last();
+                }
+            }
+        }
 
         #endregion
 

@@ -8508,5 +8508,41 @@ namespace AngleSharp.Core.Tests.Html
             Assert.AreEqual("div", dochtml0body1div1.GetTagName());
             Assert.AreEqual(NodeType.Element, dochtml0body1div1.NodeType);
         }
+
+        [Test]
+        public void CustomizableSelectWithSimpleButton_Issue1230()
+        {
+            var html = "    <select id=\"pet-select\">\r\n      <button>\r\n        <selectedcontent></selectedcontent>\r\n      </button>\r\n\r\n      <option value=\"\">Please select a pet</option>\r\n      <option value=\"cat\">\r\n        <span class=\"icon\" aria-hidden=\"true\">🐱</span\r\n        ><span class=\"option-label\">Cat</span>\r\n      </option>\r\n    </select>";
+            var doc = html.ToHtmlDocument();
+
+            var select = doc.Body.FirstElementChild;
+            Assert.AreEqual("select", select.LocalName);
+            Assert.AreEqual(3, select.ChildElementCount);
+
+            var button = select.FirstElementChild;
+            Assert.AreEqual("button", button.LocalName);
+            Assert.AreEqual(1, button.ChildElementCount);
+
+            var selectedcontent = button.FirstElementChild;
+            Assert.AreEqual("selectedcontent", selectedcontent.LocalName);
+            Assert.AreEqual(0, selectedcontent.ChildElementCount);
+
+            var option = select.LastElementChild;
+            Assert.AreEqual("option", option.LocalName);
+            Assert.AreEqual(2, option.ChildElementCount);
+        }
+
+        [Test]
+        public void XmpInSelectUsesRawtextParsing()
+        {
+            var doc = "<select><xmp><script>window.__parse_poc=1</script>".ToHtmlDocument();
+            var select = doc.Body.FirstElementChild;
+            var xmp = select.FirstElementChild;
+
+            Assert.AreEqual("select", select.LocalName);
+            Assert.AreEqual("xmp", xmp.LocalName);
+            Assert.AreEqual(0, xmp.ChildElementCount);
+            Assert.AreEqual("<script>window.__parse_poc=1</script>", xmp.TextContent);
+        }
     }
 }

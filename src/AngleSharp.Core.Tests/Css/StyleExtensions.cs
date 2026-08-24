@@ -1,5 +1,12 @@
 namespace AngleSharp.Core.Tests.Css
 {
+    using AngleSharp.Css;
+    using AngleSharp.Css.Dom;
+    using AngleSharp.Dom;
+    using AngleSharp.Html.Parser;
+    using AngleSharp.Io;
+    using AngleSharp.Text;
+    using NUnit.Framework;
     using System;
     using System.Collections;
     using System.Collections.Generic;
@@ -7,14 +14,6 @@ namespace AngleSharp.Core.Tests.Css
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using AngleSharp.Css;
-    using AngleSharp.Css.Dom;
-    using AngleSharp.Html.Parser;
-    using AngleSharp.Io;
-    using Dom;
-    using Mocks;
-    using NUnit.Framework;
-    using Text;
 
     public class StylesheetExtensions
     {
@@ -24,7 +23,7 @@ namespace AngleSharp.Core.Tests.Css
         [TestCase(10000)]
         public void TestStyleSheetsDoesNotThrowStackOverflowException(Int32 count)
         {
-            var thread = new Thread( () =>
+            var thread = new Thread(() =>
             {
                 var beginTags = String.Join("", Enumerable.Repeat("<div>", count));
                 var endTags = String.Join("", Enumerable.Repeat("</div>", count));
@@ -53,7 +52,7 @@ namespace AngleSharp.Core.Tests.Css
             var stylingService = new MockStylingService();
             var cfg = Configuration.Default
                                         .WithOnly<IStylingService>(stylingService)
-                                        .WithMockRequester(req => request = req );
+                                        .WithMockRequester(req => request = req);
             var html = @"<!doctype html><head><link rel=stylesheet href=/mock-stylesheet-1.css /></head><body></body>";
             var document = await BrowsingContext.New(cfg).OpenAsync(m => m.Content(html));
 
@@ -72,6 +71,66 @@ namespace AngleSharp.Core.Tests.Css
 
             Assert.IsNotNull(request);
             Assert.AreEqual("/mock-stylesheet-2.css", request.Address.PathName);
+        }
+
+        [Test]
+        public async Task HtmlInlineStyleSheetShouldLoad()
+        {
+            var stylingService = new MockStylingService();
+            var cfg = Configuration.Default.WithOnly<IStylingService>(stylingService);
+            var html = @"<!doctype html><head><style>p { color: blue; }</style></head><body></body>";
+            var document = await BrowsingContext.New(cfg).OpenAsync(m => m.Content(html));
+
+            Assert.AreEqual(1, document.Head.ChildNodes.Length);
+
+            var htmlHeadStyle = document.Head.ChildNodes[0];
+            Assert.AreEqual("style", htmlHeadStyle.GetTagName());
+            Assert.AreEqual(NodeType.Element, htmlHeadStyle.NodeType);
+
+            var style = htmlHeadStyle as ILinkStyle;
+            Assert.IsNotNull(style);
+            Assert.AreEqual(style.Sheet.OwnerNode.TextContent, "p { color: blue; }");
+        }
+
+        [Test]
+        public async Task SvgInlineStyleSheetShouldLoad()
+        {
+            var stylingService = new MockStylingService();
+            var cfg = Configuration.Default.WithOnly<IStylingService>(stylingService);
+            var svg = @"<svg><style>circle { fill: gold; }</style></svg>";
+            var document = await BrowsingContext.New(cfg).OpenAsync(m => m.Content(svg));
+
+            Assert.AreEqual(1, document.Body.ChildNodes.Length);
+
+            var svgBodySvg = document.Body.ChildNodes[0];
+            Assert.AreEqual(1, svgBodySvg.ChildNodes.Length);
+            Assert.AreEqual("svg", svgBodySvg.GetTagName());
+            Assert.AreEqual(NodeType.Element, svgBodySvg.NodeType);
+
+            var svgBodySvgStyle = svgBodySvg.ChildNodes[0];
+            Assert.AreEqual("style", svgBodySvgStyle.GetTagName());
+            Assert.AreEqual(NodeType.Element, svgBodySvgStyle.NodeType);
+
+            var style = svgBodySvgStyle as ILinkStyle;
+            Assert.IsNotNull(style);
+            Assert.AreEqual(style.Sheet.OwnerNode.TextContent, "circle { fill: gold; }");
+        }
+
+        [Test]
+        public async Task SvgStyleMediaAttributeShouldUpdateStyleSheetMedia()
+        {
+            var stylingService = new MockStylingService();
+            var cfg = Configuration.Default.WithOnly<IStylingService>(stylingService);
+            var svg = @"<svg><style>circle { fill: gold; }</style></svg>";
+            var document = await BrowsingContext.New(cfg).OpenAsync(m => m.Content(svg));
+
+            var style = document.QuerySelector("svg > style");
+            var sheet = ((ILinkStyle)style).Sheet;
+            Assert.IsNotNull(sheet);
+
+            style.SetAttribute(AttributeNames.Media, "print");
+
+            Assert.AreEqual("print", sheet.Media.MediaText);
         }
     }
 

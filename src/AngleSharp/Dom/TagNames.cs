@@ -402,6 +402,11 @@ namespace AngleSharp.Dom
         public static readonly String Select = "select";
 
         /// <summary>
+        /// The select tag.
+        /// </summary>
+        public static readonly String SelectedContent = "selectedcontent";
+
+        /// <summary>
         /// The option tag.
         /// </summary>
         public static readonly String Option = "option";

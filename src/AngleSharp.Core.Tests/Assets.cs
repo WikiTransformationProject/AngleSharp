@@ -12,6 +12,8 @@ namespace AngleSharp.Core.Tests
 
         public static string selectors { get; } = GetManifestResourceString("Pages.selectors.html", Windows1252);
 
+        public static string moreselectors { get; } = GetManifestResourceString("Pages.moreselectors.html", Windows1252);
+
         public static string gbk => GetManifestResourceString("Pages.GBK.html", Encoding.UTF8);
 
         public static string books => GetManifestResourceString("Pages.books.xml", Windows1252);
@@ -53,6 +55,8 @@ namespace AngleSharp.Core.Tests
         public static byte[] utf_8 => GetManifestResourceBytes("Resources.utf8_edu.bin");
 
         public static byte[] longscript => GetManifestResourceBytes("Resources.longscript.bin");
+
+        public static string urltestdata => GetManifestResourceString("Resources.urltestdata.json");
 
         public static string GetManifestResourceString(string name, Encoding encoding = null)
         {

@@ -85,7 +85,7 @@ namespace AngleSharp.Dom
             }
 
             return element.ParentElement?.LocateNamespaceFor(prefix!);
-            }
+        }
 
         /// <summary>
         /// Tries to locate a custom namespace URI.
@@ -412,6 +412,18 @@ namespace AngleSharp.Dom
         {
             var pseudoElement = element as IPseudoElement;
             return pseudoElement?.PseudoName.Is(name) ?? false;
+        }
+
+        /// <summary>
+        /// Checks if the element is currently open.
+        /// </summary>
+        /// <param name="element">The element to check.</param>
+        /// <returns>True if the element is currently open, otherwise false.</returns>
+        public static Boolean IsOpen(this IElement element)
+        {
+            //TODO implement semantic attributes
+            // https://drafts.csswg.org/selectors/#open-state
+            return false;
         }
 
         /// <summary>

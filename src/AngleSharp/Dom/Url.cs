@@ -4,9 +4,9 @@ namespace AngleSharp.Dom
     using AngleSharp.Io;
     using AngleSharp.Text;
     using System;
-    using System.Collections.Generic;
     using System.Globalization;
-    using System.Linq;
+    using System.Net;
+    using System.Net.Sockets;
     using System.Text;
     using Common;
 
@@ -27,14 +27,15 @@ namespace AngleSharp.Dom
         private static readonly String UpperDirectory = "..";
         private static readonly String[] UpperDirectoryAlternatives = new[] { "%2e%2e", ".%2e", "%2e." };
         private static readonly Url DefaultBase = new(String.Empty, String.Empty, String.Empty);
-        private static readonly Char[] C0ControlAndSpace = Enumerable.Range(0x00, 0x21).Select(c => (Char)c).ToArray();
+        private static readonly Char[] C0ControlAndSpace =
+            "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\u0008\u0009\u000A\u000B\u000C\u000D\u000E\u000F\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001A\u001B\u001C\u001D\u001E\u001F\u0020".ToCharArray();
 
         // Remark: `UseStd3AsciiRules = false` is against spec
         // https://anglesharp.github.io/Specification-Url/#concept-domain-to-ascii
         // > UseSTD3ASCIIRules set to beStrict
         // But if UseStd3AsciiRules it set to true, _ (underscore) will be considered invalid in host name
         // Set to false here to do loose validation
-        private static readonly IdnMapping DefaultIdnMapping = new () { AllowUnassigned = false, UseStd3AsciiRules = false };
+        private static readonly IdnMapping DefaultIdnMapping = new() { AllowUnassigned = false, UseStd3AsciiRules = false };
 
         private String? _fragment;
         private String? _query;
@@ -122,8 +123,8 @@ namespace AngleSharp.Dom
             _host = address._host;
             _username = address._username;
             _password = address._password;
-             _relative = address._relative;
-            _schemeData = address._schemeData;;
+            _relative = address._relative;
+            _schemeData = address._schemeData;
         }
 
         #endregion
@@ -387,7 +388,7 @@ namespace AngleSharp.Dom
             get => _query;
             set
             {
-                if(value == null)
+                if (value == null)
                 {
                     _query = null;
                     _params?.Reset();
@@ -441,12 +442,12 @@ namespace AngleSharp.Dom
         {
             unchecked
             {
-                var hashCode =  _fragment != null ? StringComparer.Ordinal.GetHashCode(_fragment) : 0;
+                var hashCode = _fragment != null ? StringComparer.Ordinal.GetHashCode(_fragment) : 0;
                 hashCode = (hashCode * 397) ^ (_query != null ? StringComparer.Ordinal.GetHashCode(_query) : 0);
                 hashCode = (hashCode * 397) ^ (_path != null ? StringComparer.Ordinal.GetHashCode(_path) : 0);
                 hashCode = (hashCode * 397) ^ (_scheme != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(_scheme) : 0);
                 hashCode = (hashCode * 397) ^ (_port != null ? StringComparer.Ordinal.GetHashCode(_port) : 0);
-                hashCode = (hashCode * 397) ^ (_host != null ?  StringComparer.OrdinalIgnoreCase.GetHashCode(_host) : 0);
+                hashCode = (hashCode * 397) ^ (_host != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(_host) : 0);
                 hashCode = (hashCode * 397) ^ (_username != null ? StringComparer.Ordinal.GetHashCode(_username) : 0);
                 hashCode = (hashCode * 397) ^ (_password != null ? StringComparer.Ordinal.GetHashCode(_password) : 0);
                 hashCode = (hashCode * 397) ^ (_schemeData != null ? StringComparer.Ordinal.GetHashCode(_schemeData) : 0);
@@ -790,6 +791,8 @@ namespace AngleSharp.Dom
             var buffer = StringBuilderPool.Obtain();
             var user = default(String);
             var pass = default(String);
+            _username = null;
+            _password = null;
 
             while (index < length)
             {
@@ -845,6 +848,8 @@ namespace AngleSharp.Dom
         {
             var start = index;
             _path = String.Empty;
+            _username = null;
+            _password = null;
 
             while (index < length)
             {
@@ -999,20 +1004,23 @@ namespace AngleSharp.Dom
                 index++;
             }
 
-            var paths = new List<String>();
+            var hasExistingPath = !onlyPath && !String.IsNullOrEmpty(_path) && index - init == 0;
+            var segmentCount = 0;
+            var originalCount = 0;
+            var output = StringBuilderPool.Obtain();
 
-            if (!onlyPath && !String.IsNullOrEmpty(_path) && index - init == 0)
+            if (hasExistingPath)
             {
-                var split = _path.Split(Symbols.Solidus);
+                var lastSlash = _path.LastIndexOf(Symbols.Solidus);
 
-                if (split.Length > 1)
+                if (lastSlash >= 0)
                 {
-                    paths.AddRange(split);
-                    paths.RemoveAt(split.Length - 1);
+                    output.Append(_path, 0, lastSlash);
+                    segmentCount = CountChar(output, Symbols.Solidus) + 1;
+                    originalCount = segmentCount;
                 }
             }
 
-            var originalCount = paths.Count;
             var buffer = StringBuilderPool.Obtain();
 
             while (index <= length)
@@ -1039,9 +1047,21 @@ namespace AngleSharp.Dom
 
                     if (path.Is(UpperDirectory))
                     {
-                        if (paths.Count > 0)
+                        if (segmentCount > 0)
                         {
-                            paths.RemoveAt(paths.Count - 1);
+                            // Remove last segment from output
+                            var lastSlash = LastIndexOf(output, Symbols.Solidus);
+
+                            if (lastSlash >= 0)
+                            {
+                                output.Length = lastSlash;
+                            }
+                            else
+                            {
+                                output.Length = 0;
+                            }
+
+                            segmentCount--;
                         }
 
                         close = true;
@@ -1049,16 +1069,23 @@ namespace AngleSharp.Dom
                     else if (!path.Is(CurrentDirectory))
                     {
                         if (_scheme.Is(ProtocolNames.File) &&
-                            paths.Count == originalCount &&
+                            segmentCount == originalCount &&
                             path.Length == 2 &&
                             path[0].IsLetter() &&
                             path[1] == Symbols.Pipe)
                         {
                             path = path.Replace(Symbols.Pipe, Symbols.Colon);
-                            paths.Clear();
+                            output.Length = 0;
+                            segmentCount = 0;
                         }
 
-                        paths.Add(path);
+                        if (segmentCount > 0)
+                        {
+                            output.Append(Symbols.Solidus);
+                        }
+
+                        output.Append(path);
+                        segmentCount++;
                     }
                     else
                     {
@@ -1067,7 +1094,12 @@ namespace AngleSharp.Dom
 
                     if (close && c != Symbols.Solidus && c != Symbols.ReverseSolidus)
                     {
-                        paths.Add(String.Empty);
+                        if (segmentCount > 0)
+                        {
+                            output.Append(Symbols.Solidus);
+                        }
+
+                        segmentCount++;
                     }
 
                     if (breakNow)
@@ -1097,7 +1129,7 @@ namespace AngleSharp.Dom
             }
 
             buffer.ReturnToPool();
-            _path = String.Join("/", paths);
+            _path = output.ToPool();
             _query = null;
 
             if (index < length)
@@ -1111,6 +1143,34 @@ namespace AngleSharp.Dom
             }
 
             return true;
+        }
+
+        private static Int32 CountChar(StringBuilder sb, Char c)
+        {
+            var count = 0;
+
+            for (var i = 0; i < sb.Length; i++)
+            {
+                if (sb[i] == c)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static Int32 LastIndexOf(StringBuilder sb, Char c)
+        {
+            for (var i = sb.Length - 1; i >= 0; i--)
+            {
+                if (sb[i] == c)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         internal Boolean ParseQuery(String input, Int32 index, Int32 length, Boolean onlyQuery = false, Boolean fromParams = false)
@@ -1182,6 +1242,12 @@ namespace AngleSharp.Dom
         private static String NormalizeInput(String input)
         {
             var trimmedInput = input.Trim(C0ControlAndSpace);
+
+            if (trimmedInput.AsSpan().IndexOfAny('\t', '\n', '\r') < 0)
+            {
+                return trimmedInput;
+            }
+
             var buffer = StringBuilderPool.Obtain();
             foreach (Char c in trimmedInput)
             {
@@ -1190,7 +1256,6 @@ namespace AngleSharp.Dom
                     case Symbols.Tab:
                     case Symbols.LineFeed:
                     case Symbols.CarriageReturn:
-                        // parse error
                         break;
                     default:
                         buffer.Append(c);
@@ -1254,11 +1319,18 @@ namespace AngleSharp.Dom
                 return true;
             }
 
-            // TODO: IPv6 Parsing
             if (length > 1 && hostName[start] == Symbols.SquareBracketOpen && hostName[start + length - 1] == Symbols.SquareBracketClose)
             {
+                var literal = hostName.Substring(start + 1, length - 2);
+
+                if (TryParseIpv6Address(literal, out var normalizedLiteral))
+                {
+                    sanatizedHostName = String.Concat("[", normalizedLiteral, "]");
+                    return true;
+                }
+
                 sanatizedHostName = hostName.Substring(start, length);
-                return true;
+                return false;
             }
 
             // https://anglesharp.github.io/Specification-Url/#host-parsing 3.5.4
@@ -1313,7 +1385,205 @@ namespace AngleSharp.Dom
 
             sanatizedHostName = buffer.ToPool();
 
-            // TODO: IPv4 parsing
+            if (EndsInNumber(sanatizedHostName))
+            {
+                if (!TryParseIpv4Address(sanatizedHostName, out sanatizedHostName))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static Boolean EndsInNumber(String host)
+        {
+            var parts = host.Split(Symbols.Dot);
+            var count = parts.Length;
+
+            if (count > 1 && parts[count - 1].Length == 0)
+            {
+                count--;
+            }
+
+            if (count == 0)
+            {
+                return false;
+            }
+
+            var last = parts[count - 1];
+
+            if (TryParseIpv4Number(last, out _))
+            {
+                return true;
+            }
+
+            if (last.Length == 0)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < last.Length; i++)
+            {
+                if (!last[i].IsDigit())
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static Boolean TryParseIpv6Address(String value, out String parsedValue)
+        {
+            // Zone identifiers are not part of URL host parser IPv6 address literals.
+            if (value.IndexOf(Symbols.Percent) >= 0)
+            {
+                parsedValue = value;
+                return false;
+            }
+
+            if (IPAddress.TryParse(value, out var address) && address.AddressFamily == AddressFamily.InterNetworkV6)
+            {
+                parsedValue = address.ToString().ToLowerInvariant();
+                return true;
+            }
+
+            parsedValue = value;
+            return false;
+        }
+
+        private static Boolean TryParseIpv4Address(String host, out String parsedHost)
+        {
+            var parts = host.Split(Symbols.Dot);
+            var count = parts.Length;
+
+            if (count > 1 && parts[count - 1].Length == 0)
+            {
+                count--;
+            }
+
+            if (count == 0 || count > 4)
+            {
+                parsedHost = host;
+                return false;
+            }
+
+            var numbers = new UInt32[count];
+
+            for (var i = 0; i < count; i++)
+            {
+                if (!TryParseIpv4Number(parts[i], out numbers[i]))
+                {
+                    parsedHost = host;
+                    return false;
+                }
+            }
+
+            for (var i = 0; i < count - 1; i++)
+            {
+                if (numbers[i] > 255)
+                {
+                    parsedHost = host;
+                    return false;
+                }
+            }
+
+            var maxLastPart = 1UL << (8 * (5 - count));
+
+            if (numbers[count - 1] >= maxLastPart)
+            {
+                parsedHost = host;
+                return false;
+            }
+
+            UInt64 address = numbers[count - 1];
+
+            for (var i = 0; i < count - 1; i++)
+            {
+                address += (UInt64)numbers[i] << (8 * (3 - i));
+            }
+
+            parsedHost = String.Concat(
+                ((address >> 24) & 0xFF).ToString(CultureInfo.InvariantCulture), ".",
+                ((address >> 16) & 0xFF).ToString(CultureInfo.InvariantCulture), ".",
+                ((address >> 8) & 0xFF).ToString(CultureInfo.InvariantCulture), ".",
+                (address & 0xFF).ToString(CultureInfo.InvariantCulture));
+            return true;
+        }
+
+        private static Boolean TryParseIpv4Number(String value, out UInt32 parsedValue)
+        {
+            if (String.IsNullOrEmpty(value))
+            {
+                parsedValue = 0;
+                return false;
+            }
+
+            var index = 0;
+            var @base = 10;
+
+            if (value.Length >= 2 && value[0] == '0')
+            {
+                if (value[1] is 'x' or 'X')
+                {
+                    @base = 16;
+                    index = 2;
+                }
+                else
+                {
+                    @base = 8;
+                    index = 1;
+                }
+            }
+
+            if (index == value.Length)
+            {
+                parsedValue = 0;
+                return true;
+            }
+
+            UInt64 number = 0;
+
+            for (var i = index; i < value.Length; i++)
+            {
+                var digit = value[i];
+                Int32 weight;
+
+                if (digit.IsDigit())
+                {
+                    weight = digit - '0';
+                }
+                else if (digit.IsInRange('a', 'f'))
+                {
+                    weight = digit - 'a' + 10;
+                }
+                else if (digit.IsInRange('A', 'F'))
+                {
+                    weight = digit - 'A' + 10;
+                }
+                else
+                {
+                    parsedValue = 0;
+                    return false;
+                }
+
+                if (weight >= @base)
+                {
+                    parsedValue = 0;
+                    return false;
+                }
+
+                number = number * (UInt32)@base + (UInt32)weight;
+
+                if (number > UInt32.MaxValue)
+                {
+                    parsedValue = 0;
+                    return false;
+                }
+            }
+
+            parsedValue = (UInt32)number;
             return true;
         }
 
@@ -1346,6 +1616,6 @@ namespace AngleSharp.Dom
                 return chars.Slice(0, count).ToString();
             }
         }
-#endregion
+        #endregion
     }
 }

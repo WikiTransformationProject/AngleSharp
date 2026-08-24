@@ -113,6 +113,11 @@ namespace AngleSharp.Css
         public static readonly String Indeterminate = "indeterminate";
 
         /// <summary>
+        /// The open pseudo class.
+        /// </summary>
+        public static readonly String Open = "open";
+
+        /// <summary>
         /// The placeholder-shown pseudo class.
         /// </summary>
         public static readonly String PlaceholderShown = "placeholder-shown";
@@ -236,6 +241,11 @@ namespace AngleSharp.Css
         /// The contains pseudo function.
         /// </summary>
         public static readonly String Where = "where";
+
+        /// <summary>
+        /// The host pseudo class.
+        /// </summary>
+        public static readonly String Host = "host";
 
         /// <summary>
         /// The host-context pseudo function.

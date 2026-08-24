@@ -6,7 +6,6 @@ namespace AngleSharp.Html.Parser
     using Dom.Events;
     using Text;
     using System;
-    using System.Buffers;
     using System.Collections.Generic;
     using Tokens;
     using Tokens.Struct;
@@ -295,7 +294,9 @@ namespace AngleSharp.Html.Parser
 
                     default:
                         Append(c);
-                        break;
+                        // Try to scan ahead and bulk-append plain text
+                        c = ScanDataText();
+                        continue;
                 }
 
                 c = GetNext();

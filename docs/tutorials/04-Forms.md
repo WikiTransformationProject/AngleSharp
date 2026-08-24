@@ -30,6 +30,15 @@ if (queryInput != null)
 
 The latter version is much more verbose and requires additional checking on our side. The upside of this version is that we can also treat the error case (i.e., the expected field with the name `q` is not found or is not an `IHtmlInputElement`), which is completely ignored in the former version.
 
+Some webpages will not handle the form submission correctly unless it is triggered from a specific control on the page. This can be done like:
+
+``` cs
+// first research how to identify the submit element on the page you're working with, then...
+IHtmlInputElement submitButton = queryDocument.QuerySelection<IHtmlInputElement>("#submitbutton");
+IDocument resultDocument = await form.SubmitAsync(submitButton);
+```
+Note that the above scenario requires setting the form values via the more verbose mechanism.
+
 An important aspect of submitting forms is that we require at least a default loader. Forms usually require making an HTTP request for loading a new document (mostly using the POST verb), which yields the demand for having a requester configured upfront. Note that sometimes forms even come with stronger requirements, especially if they are properly secured. In such cases the use of `WithCookies()` to configure a cookie container could be mandatory.
 
 The code for using a cookie container looks almost identical:

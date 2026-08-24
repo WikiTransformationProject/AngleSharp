@@ -1,7 +1,6 @@
-﻿namespace AngleSharp.Text;
+namespace AngleSharp.Text;
 
 using System;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -52,6 +51,11 @@ public sealed class ReadOnlyMemoryTextSource : IReadOnlyTextSource
             return _content ??= _memory.Span.ToString();
         }
     }
+
+    /// <summary>
+    /// Gets the underlying memory buffer.
+    /// </summary>
+    internal ReadOnlyMemory<Char> Memory => _memory;
 
     /// <ihneritdoc />
     public Char this[Int32 index] => _content != null ? _content[index] : _memory.Span[index];

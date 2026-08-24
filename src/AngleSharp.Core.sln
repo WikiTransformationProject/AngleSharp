@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28010.2048
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36401.2 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AngleSharp.Core", "AngleSharp\AngleSharp.Core.csproj", "{91F78C48-287E-41B5-9E49-44D6E1E31290}"
 EndProject
@@ -9,15 +9,17 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AngleSharp.Benchmarks", "An
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{988B2C40-782B-4128-9551-7AE65B60F903}"
 	ProjectSection(SolutionItems) = preProject
-		AngleSharp.nuspec = AngleSharp.nuspec
-		Directory.Build.props = Directory.Build.props
 		..\.editorconfig = ..\.editorconfig
+		AngleSharp.nuspec = AngleSharp.nuspec
+		..\CHANGELOG.md = ..\CHANGELOG.md
+		..\CONTRIBUTORS.md = ..\CONTRIBUTORS.md
+		Directory.Build.props = Directory.Build.props
 		..\README.md = ..\README.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AngleSharp.Core.Tests", "AngleSharp.Core.Tests\AngleSharp.Core.Tests.csproj", "{C3074D7E-CA6C-4F2C-813D-BD97462DC3EB}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "_build", "..\nuke\_build.csproj", "{C5A6C092-A03A-47FB-B260-F1F87564F020}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "_build", "..\build\_build.csproj", "{C5A6C092-A03A-47FB-B260-F1F87564F020}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,8 +27,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{C5A6C092-A03A-47FB-B260-F1F87564F020}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C5A6C092-A03A-47FB-B260-F1F87564F020}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{91F78C48-287E-41B5-9E49-44D6E1E31290}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{91F78C48-287E-41B5-9E49-44D6E1E31290}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{91F78C48-287E-41B5-9E49-44D6E1E31290}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -39,6 +39,8 @@ Global
 		{C3074D7E-CA6C-4F2C-813D-BD97462DC3EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C3074D7E-CA6C-4F2C-813D-BD97462DC3EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C3074D7E-CA6C-4F2C-813D-BD97462DC3EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5A6C092-A03A-47FB-B260-F1F87564F020}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5A6C092-A03A-47FB-B260-F1F87564F020}.Release|Any CPU.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

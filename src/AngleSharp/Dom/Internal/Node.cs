@@ -5,8 +5,6 @@ namespace AngleSharp.Dom
     using System.IO;
     using Common;
     using Html.Construction;
-    using Html.Parser.Tokens;
-    using Html.Parser.Tokens.Struct;
 
     /// <summary>
     /// Represents a node in the generated tree.
@@ -118,7 +116,16 @@ namespace AngleSharp.Dom
         INode? INode.Parent => _parent;
 
         /// <inheritdoc />
-        public IElement? ParentElement => _parent as IElement;
+        public IElement? ParentElement
+        {
+            get
+            {
+                // Avoids the interface cast helper, which is hot for descendant and
+                // child combinators walking the ancestor chain of every candidate.
+                var parent = _parent;
+                return parent is not null && parent.NodeType == NodeType.Element ? (Element)parent : null;
+            }
+        }
 
         INodeList INode.ChildNodes => _children;
 
@@ -271,21 +278,14 @@ namespace AngleSharp.Dom
         internal INode InsertBefore(Node newElement, Node? referenceElement, Boolean suppressObservers)
         {
             var document = Owner;
-            var count = newElement.NodeType == NodeType.DocumentFragment ? newElement.ChildNodes.Length : 1;
 
             if (referenceElement is not null && document is not null)
             {
                 var childIndex = referenceElement.Index();
-                foreach (var m in document.GetAttachedReferences<Range>())
+
+                foreach (var m in document.GetAttachedReferences<IPreInsert>())
                 {
-                    if (m.Head == this && m.Start > childIndex)
-                    {
-                        m.StartWith(this, m.Start + count);
-                    }
-                    if (m.Tail == this && m.End > childIndex)
-                    {
-                        m.EndWith(this, m.End + count);
-                    }
+                    m.PreInsert(this, newElement, childIndex);
                 }
             }
 
@@ -349,24 +349,9 @@ namespace AngleSharp.Dom
 
             if (document is not null)
             {
-                foreach (var m in document.GetAttachedReferences<Range>())
+                foreach (var m in document.GetAttachedReferences<IPreRemove>())
                 {
-                    if (m.Head.IsInclusiveDescendantOf(node))
-                    {
-                        m.StartWith(this, index);
-                    }
-                    if (m.Tail.IsInclusiveDescendantOf(node))
-                    {
-                        m.EndWith(this, index);
-                    }
-                    if (m.Head == this && m.Start > index)
-                    {
-                        m.StartWith(this, m.Start - 1);
-                    }
-                    if (m.Tail == this && m.End > index)
-                    {
-                        m.EndWith(this, m.End - 1);
-                    }
+                    m.PreRemove(this, node, index);
                 }
             }
 

@@ -43,7 +43,7 @@ AngleSharp and its libraries uses features from the latest versions of C# (e.g.,
 
 AngleSharp itself does not have dependencies, however, the tests are dependent on NUnit.
 
-The build system of AngleSharp uses Cake. A bootstrap script (build.ps1 for Windows or build.sh for *nix systems) is included. Note, that at the moment AngleSharp may require NuGet 3.5, which looks for MSBuild pre-15, i.e., before Visual Studio 2017 on Windows systems. We aim to drop this requirement entirely soon.
+The build system of AngleSharp uses Fallout.
 
 ### Code Conventions
 
@@ -119,8 +119,6 @@ The following files should not be edited directly in the current repository, but
 .github/*
 build.ps1
 build.sh
-tools/anglesharp.cake
-tools/packages.config
 LICENSE
 ```
 

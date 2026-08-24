@@ -1,0 +1,17 @@
+name: tweet-release
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  tweet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: smapiot/send-bluesky-post-action@v2
+        name: Bluesky post new release
+        with:
+          status: "New ${{ github.event.repository.name }} release ${{ github.event.release.tag_name }}! ${{ github.event.release.html_url }} #dotnet #anglesharp #release"
+          bluesky-email: ${{ secrets.BLUESKY_EMAIL }}
+          bluesky-password: ${{ secrets.BLUESKY_PASSWORD }}

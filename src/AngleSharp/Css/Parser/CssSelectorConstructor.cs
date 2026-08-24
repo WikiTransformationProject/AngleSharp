@@ -1,5 +1,6 @@
 namespace AngleSharp.Css.Parser
 {
+    using AngleSharp.Css;
     using AngleSharp.Common;
     using AngleSharp.Css.Dom;
     using AngleSharp.Dom;
@@ -7,6 +8,9 @@ namespace AngleSharp.Css.Parser
     using AngleSharp.Text;
     using System;
     using System.Collections.Generic;
+#if NET8_0_OR_GREATER
+    using System.Collections.Frozen;
+#endif
     using System.Globalization;
     using System.Linq;
 
@@ -18,7 +22,7 @@ namespace AngleSharp.Css.Parser
     {
         #region Fields
 
-        private static readonly Dictionary<String, Func<CssSelectorConstructor, FunctionState>> pseudoClassFunctions = new(StringComparer.OrdinalIgnoreCase)
+        private static readonly Dictionary<String, Func<CssSelectorConstructor, FunctionState>> _pseudoClassFunctionsDict = new(StringComparer.OrdinalIgnoreCase)
         {
             { PseudoClassNames.NthChild, ctx => new ChildFunctionState((step, offset, kind) => new FirstChildSelector(step, offset, kind), ctx, withOptionalSelector: true) },
             { PseudoClassNames.NthLastChild, ctx => new ChildFunctionState((step, offset, kind) => new LastChildSelector(step, offset, kind), ctx, withOptionalSelector: true) },
@@ -37,6 +41,19 @@ namespace AngleSharp.Css.Parser
             { PseudoClassNames.HostContext, ctx => new HostContextFunctionState(ctx) },
         };
 
+        private static readonly Dictionary<String, Func<CssSelectorConstructor, FunctionState>> _pseudoElementFunctionsDict = new(StringComparer.OrdinalIgnoreCase)
+        {
+            { PseudoElementNames.Picker, _ => new PickerFunctionState() },
+        };
+
+#if NET8_0_OR_GREATER
+        private static readonly FrozenDictionary<String, Func<CssSelectorConstructor, FunctionState>> pseudoClassFunctions = _pseudoClassFunctionsDict.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+        private static readonly FrozenDictionary<String, Func<CssSelectorConstructor, FunctionState>> pseudoElementFunctions = _pseudoElementFunctionsDict.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+#else
+        private static readonly Dictionary<String, Func<CssSelectorConstructor, FunctionState>> pseudoClassFunctions = _pseudoClassFunctionsDict;
+        private static readonly Dictionary<String, Func<CssSelectorConstructor, FunctionState>> pseudoElementFunctions = _pseudoElementFunctionsDict;
+#endif
+
         private readonly CssTokenizer _tokenizer = tokenizer;
         private readonly Stack<CssCombinator> _combinators = new Stack<CssCombinator>();
         private readonly IAttributeSelectorFactory _attributeSelector = attributeSelector;
@@ -49,7 +66,7 @@ namespace AngleSharp.Css.Parser
         private ComplexSelector? _complex;
         private String? _attrName;
         private String? _attrValue;
-        private Boolean _attrInsensitive = false;
+        private AttributeSelectorCaseSensitivity _attrCaseSensitivity = AttributeSelectorCaseSensitivity.Auto;
         private String _attrOp = String.Empty;
         private String? _attrNs;
         private Boolean _valid = true;
@@ -166,6 +183,7 @@ namespace AngleSharp.Css.Parser
                     _attrValue = null;
                     _attrOp = String.Empty;
                     _attrNs = null;
+                    _attrCaseSensitivity = AttributeSelectorCaseSensitivity.Auto;
                     _state = State.Attribute;
                     _ready = false;
                     break;
@@ -306,19 +324,33 @@ namespace AngleSharp.Css.Parser
 
         private void OnAttributeEnd(CssSelectorToken token)
         {
-            if (!_attrInsensitive && token.Type == CssTokenType.Ident && token.Data is "i")
+            if (_attrCaseSensitivity == AttributeSelectorCaseSensitivity.Auto && token.Type == CssTokenType.Ident)
             {
-                _attrInsensitive = true;
+                if (token.Data.Isi("i"))
+                {
+                    _attrCaseSensitivity = AttributeSelectorCaseSensitivity.CaseInsensitive;
+                    return;
+                }
+
+                if (token.Data.Isi("s"))
+                {
+                    _attrCaseSensitivity = AttributeSelectorCaseSensitivity.CaseSensitive;
+                    return;
+                }
             }
-            else if (token.Type != CssTokenType.Whitespace)
+
+            if (token.Type != CssTokenType.Whitespace)
             {
                 _state = State.Data;
                 _ready = true;
 
                 if (token.Type == CssTokenType.SquareBracketClose)
                 {
-                    var selector = _attributeSelector.Create(_attrOp, _attrName!, _attrValue!, _attrNs, _attrInsensitive);
-                    _attrInsensitive = false;
+                    var selector = _attributeSelector is IAttributeSelectorFactory2 selectorFactory
+                        ? selectorFactory.Create(_attrOp, _attrName!, _attrValue!, _attrNs, _attrCaseSensitivity)
+                        : _attributeSelector.Create(_attrOp, _attrName!, _attrValue!, _attrNs, _attrCaseSensitivity == AttributeSelectorCaseSensitivity.CaseInsensitive);
+
+                    _attrCaseSensitivity = AttributeSelectorCaseSensitivity.Auto;
                     Insert(selector);
                 }
                 else
@@ -383,6 +415,20 @@ namespace AngleSharp.Css.Parser
                 {
                     _valid = _valid && !_nested;
                     Insert(sel);
+                    return;
+                }
+            }
+            else if (token.Type == CssTokenType.Function)
+            {
+                if (pseudoElementFunctions.TryGetValue(token.Data, out var creator))
+                {
+                    _state = State.Function;
+                    _function = creator.Invoke(this);
+                    _ready = false;
+                    return;
+                }
+                else if (_forgiving)
+                {
                     return;
                 }
             }
@@ -836,6 +882,47 @@ namespace AngleSharp.Css.Parser
             }
         }
 
+        private sealed class PickerFunctionState : FunctionState
+        {
+            private Boolean valid;
+            private String? value;
+
+            public PickerFunctionState()
+            {
+                valid = true;
+                value = null;
+            }
+
+            protected override Boolean OnToken(CssSelectorToken token)
+            {
+                if (token.Type == CssTokenType.Ident)
+                {
+                    value = token.Data;
+                }
+                else if (token.Type == CssTokenType.RoundBracketClose)
+                {
+                    return true;
+                }
+                else if (token.Type != CssTokenType.Whitespace)
+                {
+                    valid = false;
+                }
+
+                return false;
+            }
+
+            public override ISelector? Produce()
+            {
+                if (valid && value is not null)
+                {
+                    var code = PseudoElementNames.Picker.CssFunction(value);
+                    return new PseudoElementSelector(el => el.IsPseudo(code), code);
+                }
+
+                return null;
+            }
+        }
+
         private sealed class ContainsFunctionState : FunctionState
         {
             private Boolean _valid;
@@ -870,7 +957,8 @@ namespace AngleSharp.Css.Parser
                 if (_valid && _value is not null)
                 {
                     var code = PseudoClassNames.Contains.CssFunction(_value);
-                    return new PseudoClassSelector(el => el.TextContent.Contains(_value), code);
+                    var matcher = new TextContainsMatcher(_value);
+                    return new PseudoClassSelector(matcher.Matches, code);
                 }
 
                 return null;

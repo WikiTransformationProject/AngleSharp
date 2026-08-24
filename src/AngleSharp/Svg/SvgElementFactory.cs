@@ -19,6 +19,7 @@ namespace AngleSharp.Svg
             { TagNames.Desc, (document, prefix) => new SvgDescElement(document, prefix) },
             { TagNames.ForeignObject, (document, prefix) => new SvgForeignObjectElement(document, prefix) },
             { TagNames.Title, (document, prefix) => new SvgTitleElement(document, prefix) },
+            { TagNames.Style, (document, prefix) => new SvgStyleElement(document, prefix) },
         };
 
         internal static readonly SvgElementFactory Instance = new();

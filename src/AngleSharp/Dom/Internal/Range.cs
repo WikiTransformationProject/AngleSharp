@@ -9,7 +9,7 @@ namespace AngleSharp.Dom
     /// <summary>
     /// A DOM range to gather DOM tree information.
     /// </summary>
-    sealed class Range : IRange
+    sealed class Range : IRange, IPreRemove, IPreInsert
     {
         #region Fields
 
@@ -48,7 +48,7 @@ namespace AngleSharp.Dom
 
         public Int32 End => _end.Offset;
 
-        public Boolean IsCollapsed => _start.Node == _end.Node;
+        public Boolean IsCollapsed => _start.Node == _end.Node && _start.Offset == _end.Offset;
 
         public INode CommonAncestor
         {
@@ -62,6 +62,45 @@ namespace AngleSharp.Dom
                 }
 
                 return container!;
+            }
+        }
+
+        #endregion
+
+        #region Internal
+
+        void IPreInsert.PreInsert(Node parent, Node node, Int32 index)
+        {
+            var count = node.NodeType == NodeType.DocumentFragment ? node.ChildNodes.Length : 1;
+
+            if (Head == parent && Start > index)
+            {
+                StartWith(parent, Start + count);
+            }
+
+            if (Tail == parent && End > index)
+            {
+                EndWith(parent, End + count);
+            }
+        }
+
+        void IPreRemove.PreRemove(Node parent, Node node, Int32 index)
+        {
+            if (Head.IsInclusiveDescendantOf(node))
+            {
+                StartWith(parent, index);
+            }
+            if (Tail.IsInclusiveDescendantOf(node))
+            {
+                EndWith(parent, index);
+            }
+            if (Head == parent && Start > index)
+            {
+                StartWith(parent, Start - 1);
+            }
+            if (Tail == parent && End > index)
+            {
+                EndWith(parent, End - 1);
             }
         }
 
@@ -363,10 +402,12 @@ namespace AngleSharp.Dom
                     }
 
                     var firstPartiallyContainedChild = !originalStart.Node.IsInclusiveAncestorOf(originalEnd.Node) ?
-                        commonAncestor.GetNodes<INode>(predicate: IsPartiallyContained).FirstOrDefault() : null;
+                        commonAncestor.ChildNodes.FirstOrDefault(IsPartiallyContained) : null;
                     var lastPartiallyContainedchild = !originalEnd.Node.IsInclusiveAncestorOf(originalStart.Node) ?
-                        commonAncestor.GetNodes<INode>(predicate: IsPartiallyContained).LastOrDefault() : null;
-                    var containedChildren = commonAncestor.GetNodes<INode>(predicate: Intersects).ToList();
+                        commonAncestor.ChildNodes.LastOrDefault(IsPartiallyContained) : null;
+                    var containedChildren = commonAncestor.ChildNodes
+                        .Where(m => new Boundary(m, 0) > originalStart && new Boundary(m, GetNodeLength(m)) < originalEnd)
+                        .ToList();
 
                     if (containedChildren.OfType<IDocumentType>().Any())
                     {
@@ -377,12 +418,12 @@ namespace AngleSharp.Dom
                     {
                         var referenceNode = originalStart.Node;
 
-                        while (referenceNode.Parent != null && !referenceNode.IsInclusiveAncestorOf(originalEnd.Node))
+                        while (referenceNode.Parent != null && !referenceNode.Parent.IsInclusiveAncestorOf(originalEnd.Node))
                         {
                             referenceNode = referenceNode.Parent;
                         }
 
-                        newBoundary = new Boundary(referenceNode, referenceNode.Parent!.ChildNodes.Index(referenceNode) + 1);
+                        newBoundary = new Boundary(referenceNode.Parent!, referenceNode.Index() + 1);
                     }
 
                     if (firstPartiallyContainedChild is ICharacterData)
@@ -397,11 +438,11 @@ namespace AngleSharp.Dom
                     }
                     else if (firstPartiallyContainedChild != null)
                     {
-                        var clone = firstPartiallyContainedChild.Clone();
+                        var clone = firstPartiallyContainedChild.Clone(false);
                         fragment.AppendChild(clone);
                         var subrange = new Range(originalStart, new Boundary(firstPartiallyContainedChild, firstPartiallyContainedChild.ChildNodes.Length));
                         var subfragment = subrange.ExtractContent();
-                        fragment.AppendChild(subfragment);
+                        clone.AppendChild(subfragment);
                     }
 
                     foreach (var child in containedChildren)
@@ -419,11 +460,11 @@ namespace AngleSharp.Dom
                     }
                     else if (lastPartiallyContainedchild != null)
                     {
-                        var clone = lastPartiallyContainedchild.Clone();
+                        var clone = lastPartiallyContainedchild.Clone(false);
                         fragment.AppendChild(clone);
                         var subrange = new Range(new Boundary(lastPartiallyContainedchild, 0), originalEnd);
                         var subfragment = subrange.ExtractContent();
-                        fragment.AppendChild(subfragment);
+                        clone.AppendChild(subfragment);
                     }
 
                     _start = newBoundary;
@@ -463,10 +504,12 @@ namespace AngleSharp.Dom
                     }
 
                     var firstPartiallyContainedChild = !originalStart.Node.IsInclusiveAncestorOf(originalEnd.Node) ?
-                        commonAncestor.GetNodes<INode>(predicate: IsPartiallyContained).FirstOrDefault() : null;
+                        commonAncestor.ChildNodes.FirstOrDefault(IsPartiallyContained) : null;
                     var lastPartiallyContainedchild = !originalEnd.Node.IsInclusiveAncestorOf(originalStart.Node) ?
-                        commonAncestor.GetNodes<INode>(predicate: IsPartiallyContained).LastOrDefault() : null;
-                    var containedChildren = commonAncestor.GetNodes<INode>(predicate: Intersects).ToList();
+                        commonAncestor.ChildNodes.LastOrDefault(IsPartiallyContained) : null;
+                    var containedChildren = commonAncestor.ChildNodes
+                        .Where(m => new Boundary(m, 0) > originalStart && new Boundary(m, GetNodeLength(m)) < originalEnd)
+                        .ToList();
 
                     if (containedChildren.OfType<IDocumentType>().Any())
                     {
@@ -484,11 +527,11 @@ namespace AngleSharp.Dom
                     }
                     else if (firstPartiallyContainedChild != null)
                     {
-                        var clone = firstPartiallyContainedChild.Clone();
+                        var clone = firstPartiallyContainedChild.Clone(false);
                         fragment.AppendChild(clone);
                         var subrange = new Range(originalStart, new Boundary(firstPartiallyContainedChild, firstPartiallyContainedChild.ChildNodes.Length));
                         var subfragment = subrange.CopyContent();
-                        fragment.AppendChild(subfragment);
+                        clone.AppendChild(subfragment);
                     }
 
                     foreach (var child in containedChildren)
@@ -505,11 +548,11 @@ namespace AngleSharp.Dom
                     }
                     else if (lastPartiallyContainedchild != null)
                     {
-                        var clone = lastPartiallyContainedchild.Clone();
+                        var clone = lastPartiallyContainedchild.Clone(false);
                         fragment.AppendChild(clone);
                         var subrange = new Range(new Boundary(lastPartiallyContainedchild, 0), originalEnd);
                         var subfragment = subrange.CopyContent();
-                        fragment.AppendChild(subfragment);
+                        clone.AppendChild(subfragment);
                     }
                 }
             }
@@ -653,12 +696,12 @@ namespace AngleSharp.Dom
                     break;
 
                 case RangeType.EndToEnd:
-                    thisPoint = _start;
+                    thisPoint = _end;
                     otherPoint = new Boundary(sourceRange.Tail, sourceRange.End);
                     break;
 
                 case RangeType.EndToStart:
-                    thisPoint = _end;
+                    thisPoint = _start;
                     otherPoint = new Boundary(sourceRange.Tail, sourceRange.End);
                     break;
 

@@ -31,6 +31,10 @@
         /// <summary>
         /// Specifies that the method should be handled by an event remover.
         /// </summary>
-        Remover = 0x10
+        Remover = 0x10,
+        /// <summary>
+        /// Specifies that the getter only property should be handled by a method.
+        /// </summary>
+        Method = 0x20,
     }
 }

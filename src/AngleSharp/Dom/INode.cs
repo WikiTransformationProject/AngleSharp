@@ -198,6 +198,7 @@ namespace AngleSharp.Dom
         /// Gets an indicator if the element has any child nodes, or not.
         /// </summary>
         [DomName("hasChildNodes")]
+        [DomAccessor(Accessors.Method)]
         [MemberNotNullWhen(true, nameof(ChildNodes), nameof(FirstChild), nameof(LastChild))]
         Boolean HasChildNodes { get; }
 

@@ -1,4 +1,4 @@
-﻿namespace AngleSharp.Css
+namespace AngleSharp.Css
 {
     using System;
 
@@ -51,6 +51,21 @@
         /// The content pseudo element.
         /// </summary>
         public static readonly String Content = "content";
+
+        /// <summary>
+        /// The checkmark pseudo element.
+        /// </summary>
+        public static readonly String Checkmark = "checkmark";
+
+        /// <summary>
+        /// The picker-icon pseudo element.
+        /// </summary>
+        public static readonly String PickerIcon = "picker-icon";
+
+        /// <summary>
+        /// The picker pseudo element function.
+        /// </summary>
+        public static readonly String Picker = "picker";
 
         /// <summary>
         /// The separating double-colon.

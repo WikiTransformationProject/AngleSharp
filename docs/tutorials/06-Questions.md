@@ -56,7 +56,9 @@ IBrowsingContext context = BrowsingContext.New(config);
 
 ## Is it possible to get the HTML after JavaScript and Blazor run?
 
-AngleSharp is just a browser core and even though running JavaScript is possible (there is an experimental plugin out there), it will not work with complicated stuff (e.g., running Angular). I do not know if any WASM plugin exists, so I guess running something like Blazor is not possible unless someone codes the WASM plugin.
+AngleSharp.Core is a browser core, not a full browser runtime. JavaScript integration exists through companion projects such as `AngleSharp.Js`, and there is also an `AngleSharp.Wasm` repository for WebAssembly-oriented work.
+
+That said, running a complete client application such as Blazor still depends on the runtime services and browser APIs you provide around AngleSharp. Parsing HTML and hosting a full browser execution environment are different problems, so this is not something `AngleSharp.Core` solves by itself.
 
 ## How to convert HTML to XML using AngleSharp?
 
@@ -187,6 +189,8 @@ Every `IHtmlInputElement` has a `Files` property that can be used to add files.
 var input = document.QuerySelector<IHtmlInputElement>("input[type=file][name=myInputFile]");
 input?.Files.Add(file);
 ```
+
+Depending on the webpage, you may also need to set `input.Value` to the name of the file, or alternatively set it in `SubmitAsync()`'s overload that accepts the form values. If your file-based form submission results in a `System.NullReferenceException` from `HtmlFormElement.SubmitAsync()`, that indicates that `input.Value` is what is missing.
 
 In the previously used example the file variable refers to any IFile instance. AngleSharp is a PCL does not come with a proper implementation out of the box, however, a simple one may look like:
 

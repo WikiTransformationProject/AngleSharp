@@ -63,7 +63,11 @@ namespace AngleSharp.Dom
 
         IEnumerator IEnumerable.GetEnumerator() => _elements.GetEnumerator();
 
+#if NET8_0_OR_GREATER
+        IHtmlElement IReadOnlyList<IHtmlElement>.this[Int32 index] => this[index];
+#else
         IHtmlElement IHtmlCollection<IHtmlElement>.this[Int32 index] => this[index];
+#endif
 
         IHtmlElement? IHtmlCollection<IHtmlElement>.this[String id] => this[id];
 
